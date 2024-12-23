@@ -16,33 +16,63 @@ class HabitService extends ChangeNotifier {
         .where('userId', isEqualTo: userId)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => Habit.fromMap({'id': doc.id, ...doc.data()}))
-          .toList();
+      final uniqueHabits = <String, Habit>{};
+      for (var doc in snapshot.docs) {
+        final habit = Habit.fromMap({'id': doc.id, ...doc.data()});
+        uniqueHabits[habit.id] = habit;
+      }
+      return uniqueHabits.values.toList();
     });
   }
 
   Future<void> addHabit(Habit habit) async {
-    await _firestore.collection('habits').add(habit.toMap());
+    final docRef = _firestore.collection('habits').doc();
+    
+    final habitWithId = Habit(
+      id: docRef.id,
+      userId: habit.userId,
+      title: habit.title,
+      description: habit.description,
+      targetDays: habit.targetDays,
+      reminderEnabled: habit.reminderEnabled,
+      reminderTime: habit.reminderTime,
+      completedDates: habit.completedDates,
+      createdAt: habit.createdAt,
+    );
+
+    await docRef.set(habitWithId.toMap());
+    
     if (habit.reminderEnabled && habit.reminderTime != null) {
-      await _notificationService.scheduleHabitReminder(habit);
+      await _notificationService.scheduleHabitReminder(habitWithId);
     }
     notifyListeners();
   }
 
   Future<void> updateHabit(Habit habit) async {
-    await _firestore.collection('habits').doc(habit.id).update(habit.toMap());
-    await _notificationService.cancelHabitReminder(habit.id);
-    if (habit.reminderEnabled && habit.reminderTime != null) {
-      await _notificationService.scheduleHabitReminder(habit);
+    try {
+      await _firestore.collection('habits').doc(habit.id).update(habit.toMap());
+      await _notificationService.cancelHabitReminder(habit.id);
+
+      notifyListeners();
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'not-found') {
+        await _firestore.collection('habits').doc(habit.id).set(habit.toMap());
+      } else {
+        rethrow;
+      }
     }
-    notifyListeners();
   }
 
   Future<void> deleteHabit(String habitId) async {
-    await _firestore.collection('habits').doc(habitId).delete();
-    await _notificationService.cancelHabitReminder(habitId);
-    notifyListeners();
+    try {
+      await _firestore.collection('habits').doc(habitId).delete();
+      await _notificationService.cancelHabitReminder(habitId);
+      notifyListeners();
+    } catch (e) {
+      if (e is FirebaseException && e.code != 'not-found') {
+        rethrow;
+      }
+    }
   }
 
   Future<void> toggleHabitCompletion(Habit habit) async {
