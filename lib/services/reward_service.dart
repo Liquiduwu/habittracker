@@ -79,8 +79,8 @@ class RewardService extends ChangeNotifier {
 
     bool hasNewReward = false;
 
-    for (var reward in rewards) {
-      if (!reward.isUnlocked && currentStreak >= reward.requiredStreak) {
+    for (var reward in rewards.where((r) => !r.isUnlocked)) {
+      if (currentStreak >= reward.requiredStreak) {
         batch.update(rewardsRef.doc(reward.id), {'isUnlocked': true});
         hasNewReward = true;
       }

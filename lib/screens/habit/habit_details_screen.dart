@@ -257,6 +257,14 @@ class _RewardsSection extends StatelessWidget {
     }
   }
 
+  String _getRewardStatus(Reward reward, int currentStreak) {
+    if (reward.isUnlocked) {
+      return 'Completed!';
+    }
+    final daysLeft = reward.requiredStreak - currentStreak;
+    return '$daysLeft ${daysLeft == 1 ? 'day' : 'days'} to go';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -278,12 +286,16 @@ class _RewardsSection extends StatelessWidget {
                 }
 
                 final rewards = snapshot.data!;
+                context.read<RewardService>().checkAndUpdateRewards(habit.currentStreak);
+
                 return ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: rewards.length,
                   itemBuilder: (context, index) {
                     final reward = rewards[index];
+                    final isCompleted = habit.currentStreak >= reward.requiredStreak;
+                    
                     return ListTile(
                       leading: Icon(
                         _getIconData(reward.iconName),
@@ -292,11 +304,19 @@ class _RewardsSection extends StatelessWidget {
                             : Colors.grey,
                         size: 24,
                       ),
-                      title: Text(reward.title),
+                      title: Text(
+                        reward.title,
+                        style: TextStyle(
+                          fontWeight: reward.isUnlocked ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
                       subtitle: Text(reward.description),
                       trailing: reward.isUnlocked
                           ? const Icon(Icons.check_circle, color: Colors.green)
-                          : Text('${reward.requiredStreak - habit.currentStreak} days to go'),
+                          : Text(
+                              _getRewardStatus(reward, habit.currentStreak),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
                     );
                   },
                 );
