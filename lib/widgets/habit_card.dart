@@ -4,6 +4,7 @@ import 'package:habit_tracker/models/habit.dart';
 import 'package:habit_tracker/services/habit_service.dart';
 import 'package:habit_tracker/screens/habit/habit_form_screen.dart';
 import 'package:habit_tracker/screens/habit/habit_details_screen.dart';
+import 'package:share_plus/share_plus.dart';
 
 class HabitCard extends StatelessWidget {
   final Habit habit;
@@ -131,6 +132,14 @@ class HabitCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
+                leading: const Icon(Icons.share),
+                title: const Text('Share Progress'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _shareProgress(context);
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.edit),
                 title: const Text('Edit'),
                 onTap: () {
@@ -156,6 +165,25 @@ class HabitCard extends StatelessWidget {
         );
       },
     );
+  }
+
+  void _shareProgress(BuildContext context) {
+    final completionRate = (habit.completedDates.length / habit.targetDays * 100).clamp(0, 100);
+    final streakEmoji = habit.currentStreak >= 7 ? '🔥' : '✨';
+    
+    final message = '''
+Check out my progress in building this habit! $streakEmoji
+
+🎯 ${habit.title}
+📝 ${habit.description}
+🔄 Current Streak: ${habit.currentStreak} days
+⭐ Completion Rate: ${completionRate.toStringAsFixed(1)}%
+📅 Total Days: ${habit.completedDates.length}
+
+Track your habits too with Daily Habit Tracker!
+''';
+
+    Share.share(message);
   }
 
   void _confirmDelete(BuildContext context) {

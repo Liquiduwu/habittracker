@@ -6,11 +6,31 @@ import 'package:provider/provider.dart';
 import 'package:habit_tracker/services/habit_service.dart';
 import 'package:habit_tracker/models/reward.dart';
 import 'package:habit_tracker/services/reward_service.dart';
+import 'package:share_plus/share_plus.dart';
 
 class HabitDetailsScreen extends StatelessWidget {
   final Habit habit;
 
   const HabitDetailsScreen({super.key, required this.habit});
+
+  void _shareProgress(BuildContext context) {
+    final completionRate = (habit.completedDates.length / habit.targetDays * 100).clamp(0, 100);
+    final streakEmoji = habit.currentStreak >= 7 ? '🔥' : '✨';
+    
+    final message = '''
+Check out my progress in building this habit! $streakEmoji
+
+🎯 ${habit.title}
+📝 ${habit.description}
+🔄 Current Streak: ${habit.currentStreak} days
+⭐ Completion Rate: ${completionRate.toStringAsFixed(1)}%
+📅 Total Days: ${habit.completedDates.length}
+
+Track your habits too with Daily Habit Tracker!
+''';
+
+    Share.share(message);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,6 +38,10 @@ class HabitDetailsScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(habit.title),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: () => _shareProgress(context),
+          ),
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
