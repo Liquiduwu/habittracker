@@ -7,6 +7,9 @@ import 'package:habit_tracker/services/habit_service.dart';
 import 'package:habit_tracker/models/reward.dart';
 import 'package:habit_tracker/services/reward_service.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:habit_tracker/screens/journal/journal_entry_screen.dart';
+import 'package:habit_tracker/services/journal_service.dart';
+import 'package:habit_tracker/models/journal_entry.dart';
 
 class HabitDetailsScreen extends StatelessWidget {
   final Habit habit;
@@ -53,6 +56,17 @@ Track your habits too with Daily Habit Tracker!
               );
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.edit_note),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => JournalEntryScreen(habit: habit),
+                ),
+              );
+            },
+          ),
         ],
       ),
       body: ListView(
@@ -67,6 +81,8 @@ Track your habits too with Daily Habit Tracker!
           _RewardsSection(habit: habit),
           const SizedBox(height: 16),
           _CompletionHistory(habit: habit),
+          const SizedBox(height: 16),
+          _JournalSection(habit: habit),
         ],
       ),
     );
@@ -391,5 +407,113 @@ class _CompletionHistory extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _JournalSection extends StatelessWidget {
+  final Habit habit;
+
+  const _JournalSection({required this.habit});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Journal Entries',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => JournalEntryScreen(habit: habit),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Entry'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            StreamBuilder<List<JournalEntry>>(
+              stream: context.read<JournalService>().getJournalEntries(habit.id),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final entries = snapshot.data!;
+                if (entries.isEmpty) {
+                  return const Center(
+                    child: Text('No journal entries yet'),
+                  );
+                }
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: entries.length,
+                  itemBuilder: (context, index) {
+                    final entry = entries[index];
+                    return ListTile(
+                      leading: Text(_getMoodEmoji(entry.mood)),
+                      title: Text(
+                        entry.content,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        _formatDate(entry.date),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => JournalEntryScreen(
+                              habit: habit,
+                              existingEntry: entry,
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getMoodEmoji(String mood) {
+    switch (mood) {
+      case 'great':
+        return '😄';
+      case 'good':
+        return '🙂';
+      case 'okay':
+        return '😐';
+      case 'difficult':
+        return '😔';
+      default:
+        return '🙂';
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 } 
