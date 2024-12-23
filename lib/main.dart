@@ -52,8 +52,8 @@ class MyApp extends StatelessWidget {
             title: 'Daily Habit Tracker',
             debugShowCheckedModeBanner: false,
             themeMode: themeService.themeMode,
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
+            theme: AppTheme.lightTheme(themeService.primaryColor),
+            darkTheme: AppTheme.darkTheme(themeService.primaryColor),
             home: Consumer<AuthService>(
               builder: (context, authService, _) {
                 return authService.currentUser != null

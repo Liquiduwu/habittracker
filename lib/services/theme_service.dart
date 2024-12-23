@@ -2,11 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeService with ChangeNotifier {
-  final String key = "theme";
+  final String themeKey = "theme";
+  final String colorKey = "color";
   SharedPreferences? _prefs;
   bool _isDarkMode = false;
+  Color _primaryColor = Colors.green; // Default color
+
+  static const Map<String, Color> availableColors = {
+    'Red': Colors.red,
+    'Orange': Colors.orange,
+    'Yellow': Colors.amber,
+    'Green': Colors.green,
+    'Blue': Colors.blue,
+    'Violet': Colors.purple,
+  };
 
   bool get isDarkMode => _isDarkMode;
+  Color get primaryColor => _primaryColor;
 
   ThemeService() {
     loadFromPrefs();
@@ -18,13 +30,21 @@ class ThemeService with ChangeNotifier {
 
   Future<void> loadFromPrefs() async {
     await initPrefs();
-    _isDarkMode = _prefs?.getBool(key) ?? false;
+    _isDarkMode = _prefs?.getBool(themeKey) ?? false;
+    final colorString = _prefs?.getString(colorKey);
+    if (colorString != null) {
+      _primaryColor = availableColors[colorString] ?? Colors.green;
+    }
     notifyListeners();
   }
 
   Future<void> saveToPrefs() async {
     await initPrefs();
-    _prefs?.setBool(key, _isDarkMode);
+    await _prefs?.setBool(themeKey, _isDarkMode);
+    final colorEntry = availableColors.entries
+        .firstWhere((entry) => entry.value == _primaryColor,
+            orElse: () => const MapEntry('Green', Colors.green));
+    await _prefs?.setString(colorKey, colorEntry.key);
   }
 
   ThemeMode get themeMode => _isDarkMode ? ThemeMode.dark : ThemeMode.light;
@@ -33,5 +53,13 @@ class ThemeService with ChangeNotifier {
     _isDarkMode = !_isDarkMode;
     saveToPrefs();
     notifyListeners();
+  }
+
+  void setColor(String colorName) {
+    if (availableColors.containsKey(colorName)) {
+      _primaryColor = availableColors[colorName]!;
+      saveToPrefs();
+      notifyListeners();
+    }
   }
 } 
