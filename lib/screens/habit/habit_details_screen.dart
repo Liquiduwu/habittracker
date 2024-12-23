@@ -4,6 +4,8 @@ import 'package:habit_tracker/models/habit.dart';
 import 'package:habit_tracker/screens/habit/habit_form_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:habit_tracker/services/habit_service.dart';
+import 'package:habit_tracker/models/reward.dart';
+import 'package:habit_tracker/services/reward_service.dart';
 
 class HabitDetailsScreen extends StatelessWidget {
   final Habit habit;
@@ -37,6 +39,8 @@ class HabitDetailsScreen extends StatelessWidget {
           _StatsCard(habit: habit),
           const SizedBox(height: 16),
           _WeeklyChart(habit: habit),
+          const SizedBox(height: 16),
+          _RewardsSection(habit: habit),
           const SizedBox(height: 16),
           _CompletionHistory(habit: habit),
         ],
@@ -230,6 +234,78 @@ class _WeeklyChart extends StatelessWidget {
         ],
       );
     });
+  }
+}
+
+class _RewardsSection extends StatelessWidget {
+  final Habit habit;
+
+  const _RewardsSection({required this.habit});
+
+  IconData _getIconData(String iconName) {
+    switch (iconName) {
+      case 'sprout':
+        return Icons.eco;
+      case 'fire':
+        return Icons.local_fire_department;
+      case 'star':
+        return Icons.stars;
+      case 'trophy':
+        return Icons.emoji_events;
+      default:
+        return Icons.emoji_events;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Rewards',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            StreamBuilder<List<Reward>>(
+              stream: context.read<RewardService>().getUserRewards(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final rewards = snapshot.data!;
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: rewards.length,
+                  itemBuilder: (context, index) {
+                    final reward = rewards[index];
+                    return ListTile(
+                      leading: Icon(
+                        _getIconData(reward.iconName),
+                        color: reward.isUnlocked
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.grey,
+                        size: 24,
+                      ),
+                      title: Text(reward.title),
+                      subtitle: Text(reward.description),
+                      trailing: reward.isUnlocked
+                          ? const Icon(Icons.check_circle, color: Colors.green)
+                          : Text('${reward.requiredStreak - habit.currentStreak} days to go'),
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

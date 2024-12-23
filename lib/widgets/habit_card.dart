@@ -12,6 +12,8 @@ class HabitCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final progress = (habit.currentStreak / habit.targetDays * 100).clamp(0, 100);
+    
     return Card(
       child: InkWell(
         onTap: () {
@@ -47,6 +49,16 @@ class HabitCard extends StatelessWidget {
                       ],
                     ),
                   ),
+                  CircularProgressIndicator(
+                    value: progress / 100,
+                    backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                    strokeWidth: 8,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${progress.toInt()}%',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
                   IconButton(
                     icon: const Icon(Icons.more_vert),
                     onPressed: () {
@@ -67,9 +79,19 @@ class HabitCard extends StatelessWidget {
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        '${habit.currentStreak} days',
-                        style: Theme.of(context).textTheme.titleMedium,
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.local_fire_department,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${habit.currentStreak} days',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -79,7 +101,7 @@ class HabitCard extends StatelessWidget {
                     },
                     icon: Icon(
                       habit.completedDates.any((date) =>
-                              _isSameDay(context, date, DateTime.now()))
+                              context.read<HabitService>().isSameDay(date, DateTime.now()))
                           ? Icons.check_circle
                           : Icons.circle_outlined,
                     ),
@@ -91,6 +113,7 @@ class HabitCard extends StatelessWidget {
               LinearProgressIndicator(
                 value: habit.progress,
                 backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                minHeight: 6,
               ),
             ],
           ),
