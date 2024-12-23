@@ -6,6 +6,7 @@ import 'package:habit_tracker/screens/home/habit_list_screen.dart';
 import 'package:habit_tracker/screens/habit/habit_form_screen.dart';
 import 'package:habit_tracker/screens/statistics/statistics_screen.dart';
 import 'package:habit_tracker/screens/calendar/calendar_screen.dart';
+import 'package:habit_tracker/screens/habit/template_selection_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -132,10 +133,40 @@ class HomeScreen extends StatelessWidget {
       body: const HabitListScreen(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const HabitFormScreen(),
+          showModalBottomSheet(
+            context: context,
+            builder: (context) => SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.add),
+                    title: const Text('Custom Habit'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const HabitFormScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.list_alt),
+                    title: const Text('Use Template'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const TemplateSelectionScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           );
         },
