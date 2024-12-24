@@ -11,6 +11,7 @@ import 'package:habit_tracker/config/theme.dart';
 import 'package:habit_tracker/services/notification_service.dart';
 import 'package:habit_tracker/services/reward_service.dart';
 import 'package:habit_tracker/services/journal_service.dart';
+import 'package:habit_tracker/services/partnership_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,6 +51,11 @@ class MyApp extends StatelessWidget {
           create: (_) => null,
           update: (_, auth, __) =>
               auth.currentUser != null ? JournalService(auth.currentUser!.uid) : null,
+        ),
+        ChangeNotifierProxyProvider<AuthService, PartnershipService?>(
+          create: (_) => null,
+          update: (_, auth, __) =>
+              auth.currentUser != null ? PartnershipService(auth.currentUser!.uid) : null,
         ),
       ],
       child: Consumer<ThemeService>(

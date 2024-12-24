@@ -7,6 +7,7 @@ import 'package:habit_tracker/screens/habit/habit_form_screen.dart';
 import 'package:habit_tracker/screens/statistics/statistics_screen.dart';
 import 'package:habit_tracker/screens/calendar/calendar_screen.dart';
 import 'package:habit_tracker/screens/habit/template_selection_screen.dart';
+import 'package:habit_tracker/screens/partnership/partnership_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -17,7 +18,13 @@ class HomeScreen extends StatelessWidget {
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Daily Habits'),
+        title: FutureBuilder<String>(
+          future: context.read<AuthService>().getCurrentUsername(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const Text('Daily Habits');
+            return Text('Welcome, ${snapshot.data}');
+          },
+        ),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.menu),
@@ -49,6 +56,14 @@ class HomeScreen extends StatelessWidget {
                   break;
                 case 'colors':
                   _showColorPicker(context, themeService);
+                  break;
+                case 'partners':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PartnershipScreen(),
+                    ),
+                  );
                   break;
               }
             },
@@ -104,6 +119,19 @@ class HomeScreen extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     const Text('Calendar'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'partners',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.people,
+                      color: Theme.of(context).iconTheme.color,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Partners'),
                   ],
                 ),
               ),
