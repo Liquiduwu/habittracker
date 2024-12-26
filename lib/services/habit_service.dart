@@ -103,4 +103,39 @@ class HabitService extends ChangeNotifier {
   bool isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
+
+  Future<void> toggleFavorite(Habit habit) async {
+    final updatedHabit = Habit(
+      id: habit.id,
+      userId: habit.userId,
+      title: habit.title,
+      description: habit.description,
+      targetDays: habit.targetDays,
+      reminderEnabled: habit.reminderEnabled,
+      reminderTime: habit.reminderTime,
+      completedDates: habit.completedDates,
+      createdAt: habit.createdAt,
+      isFavorite: !habit.isFavorite,
+    );
+
+    await updateHabit(updatedHabit);
+  }
+
+  List<Habit> sortHabits(List<Habit> habits, String sortBy) {
+    switch (sortBy) {
+      case 'name':
+        return [...habits]..sort((a, b) => a.title.compareTo(b.title));
+      case 'date':
+        return [...habits]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      case 'favorites':
+        return [...habits]..sort((a, b) {
+            if (a.isFavorite == b.isFavorite) {
+              return a.title.compareTo(b.title);
+            }
+            return b.isFavorite ? 1 : -1;
+          });
+      default:
+        return habits;
+    }
+  }
 } 

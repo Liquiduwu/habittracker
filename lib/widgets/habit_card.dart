@@ -50,6 +50,15 @@ class HabitCard extends StatelessWidget {
                       ],
                     ),
                   ),
+                  IconButton(
+                    icon: Icon(
+                      habit.isFavorite ? Icons.star : Icons.star_border,
+                      color: habit.isFavorite ? Colors.amber : null,
+                    ),
+                    onPressed: () {
+                      context.read<HabitService>().toggleFavorite(habit);
+                    },
+                  ),
                   CircularProgressIndicator(
                     value: progress / 100,
                     backgroundColor: Theme.of(context).colorScheme.surfaceVariant,

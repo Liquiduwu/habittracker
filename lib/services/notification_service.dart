@@ -1,5 +1,4 @@
 import 'dart:ui';
-
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;

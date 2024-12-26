@@ -11,6 +11,7 @@ class Habit {
   final TimeOfDay? reminderTime;
   final List<DateTime> completedDates;
   final DateTime createdAt;
+  final bool isFavorite;
 
   Habit({
     required this.id,
@@ -22,6 +23,7 @@ class Habit {
     this.reminderTime,
     List<DateTime>? completedDates,
     DateTime? createdAt,
+    this.isFavorite = false,
   })  : completedDates = completedDates ?? [],
         createdAt = createdAt ?? DateTime.now();
 
@@ -39,6 +41,7 @@ class Habit {
       'completedDates':
           completedDates.map((date) => date.toIso8601String()).toList(),
       'createdAt': createdAt.toIso8601String(),
+      'isFavorite': isFavorite,
     };
   }
 
@@ -64,6 +67,7 @@ class Habit {
           .map((date) => DateTime.parse(date))
           .toList(),
       createdAt: DateTime.parse(map['createdAt']),
+      isFavorite: map['isFavorite'] ?? false,
     );
   }
 
