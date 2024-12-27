@@ -11,6 +11,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:habit_tracker/screens/journal/journal_entry_screen.dart';
 import 'package:habit_tracker/services/journal_service.dart';
 import 'package:habit_tracker/models/journal_entry.dart';
+import 'package:habit_tracker/widgets/add_to_calendar_button.dart';
 
 class HabitDetailsScreen extends StatefulWidget {
   final Habit habit;
@@ -145,6 +146,8 @@ Track your habits too with Daily Habit Tracker!
             isLoading: isLoadingMotivation,
             onRefresh: _fetchMotivationalMessage,
           ),
+          const SizedBox(height: 16),
+          AddToCalendarButton(habit: widget.habit), // Add the button here
           const SizedBox(height: 16),
           _WeeklyChart(habit: widget.habit),
           const SizedBox(height: 16),
