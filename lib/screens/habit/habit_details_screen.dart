@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:habit_tracker/models/habit.dart';
 import 'package:habit_tracker/screens/habit/habit_form_screen.dart';
@@ -11,23 +12,86 @@ import 'package:habit_tracker/screens/journal/journal_entry_screen.dart';
 import 'package:habit_tracker/services/journal_service.dart';
 import 'package:habit_tracker/models/journal_entry.dart';
 
-class HabitDetailsScreen extends StatelessWidget {
+class HabitDetailsScreen extends StatefulWidget {
   final Habit habit;
 
   const HabitDetailsScreen({super.key, required this.habit});
 
+  @override
+  _HabitDetailsScreenState createState() => _HabitDetailsScreenState();
+}
+
+class _HabitDetailsScreenState extends State<HabitDetailsScreen> {
+  String motivationalMessage = "Loading motivational message...";
+  bool isLoadingMotivation = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchMotivationalMessage();
+  }
+
+  void _fetchMotivationalMessage() async {
+    setState(() {
+      isLoadingMotivation = true;
+    });
+
+    try {
+      final model = GenerativeModel(
+        model: 'gemini-1.5-flash',
+        apiKey:
+            'AIzaSyC9lIurwH8K-aPIW5V0crZtozEajM_vU0M', // Use your API key or retrieve it dynamically
+      );
+
+      // Add instructions for variation and style
+      final styles = [
+        "inspirational",
+        "funny",
+        "thoughtful",
+        "energetic",
+        "poetic",
+      ];
+      final randomStyle = (styles..shuffle()).first;
+
+      final prompt = '''
+Provide a $randomStyle motivational message (less than 20 words) for the following habit:
+
+Title: ${widget.habit.title}
+Description: ${widget.habit.description}
+Current Streak: ${widget.habit.currentStreak} days
+Progress: ${(widget.habit.progress * 100).toInt()}%
+''';
+
+      final response = await model.generateContent([Content.text(prompt)]);
+
+      setState(() {
+        motivationalMessage = response.text?.trim() ??
+            "Keep pushing forward, you're doing amazing!";
+        isLoadingMotivation = false;
+      });
+    } catch (error) {
+      setState(() {
+        motivationalMessage = "Stay strong! Challenges make you grow.";
+        isLoadingMotivation = false;
+      });
+      debugPrint("Error fetching motivational message: $error");
+    }
+  }
+
   void _shareProgress(BuildContext context) {
-    final completionRate = (habit.completedDates.length / habit.targetDays * 100).clamp(0, 100);
-    final streakEmoji = habit.currentStreak >= 7 ? '🔥' : '✨';
-    
+    final completionRate =
+        (widget.habit.completedDates.length / widget.habit.targetDays * 100)
+            .clamp(0, 100);
+    final streakEmoji = widget.habit.currentStreak >= 7 ? '🔥' : '✨';
+
     final message = '''
 Check out my progress in building this habit! $streakEmoji
 
-🎯 ${habit.title}
-📝 ${habit.description}
-🔄 Current Streak: ${habit.currentStreak} days
+🎯 ${widget.habit.title}
+📝 ${widget.habit.description}
+🔄 Current Streak: ${widget.habit.currentStreak} days
 ⭐ Completion Rate: ${completionRate.toStringAsFixed(1)}%
-📅 Total Days: ${habit.completedDates.length}
+📅 Total Days: ${widget.habit.completedDates.length}
 
 Track your habits too with Daily Habit Tracker!
 ''';
@@ -39,7 +103,7 @@ Track your habits too with Daily Habit Tracker!
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(habit.title),
+        title: Text(widget.habit.title),
         actions: [
           IconButton(
             icon: const Icon(Icons.share),
@@ -51,7 +115,7 @@ Track your habits too with Daily Habit Tracker!
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => HabitFormScreen(habit: habit),
+                  builder: (context) => HabitFormScreen(habit: widget.habit),
                 ),
               );
             },
@@ -62,7 +126,7 @@ Track your habits too with Daily Habit Tracker!
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => JournalEntryScreen(habit: habit),
+                  builder: (context) => JournalEntryScreen(habit: widget.habit),
                 ),
               );
             },
@@ -72,18 +136,70 @@ Track your habits too with Daily Habit Tracker!
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _ProgressCard(habit: habit),
+          _ProgressCard(habit: widget.habit),
           const SizedBox(height: 16),
-          _StatsCard(habit: habit),
+          _StatsCard(habit: widget.habit),
           const SizedBox(height: 16),
-          _WeeklyChart(habit: habit),
+          _MotivationalSection(
+            motivationalMessage: motivationalMessage,
+            isLoading: isLoadingMotivation,
+            onRefresh: _fetchMotivationalMessage,
+          ),
           const SizedBox(height: 16),
-          _RewardsSection(habit: habit),
+          _WeeklyChart(habit: widget.habit),
           const SizedBox(height: 16),
-          _CompletionHistory(habit: habit),
+          _RewardsSection(habit: widget.habit),
           const SizedBox(height: 16),
-          _JournalSection(habit: habit),
+          _CompletionHistory(habit: widget.habit),
+          const SizedBox(height: 16),
+          _JournalSection(habit: widget.habit),
         ],
+      ),
+    );
+  }
+}
+
+class _MotivationalSection extends StatelessWidget {
+  final String motivationalMessage;
+  final bool isLoading;
+  final VoidCallback onRefresh;
+
+  const _MotivationalSection({
+    required this.motivationalMessage,
+    required this.isLoading,
+    required this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Motivation',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : Text(
+                    motivationalMessage,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onRefresh,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Refresh'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -266,9 +382,7 @@ class _WeeklyChart extends StatelessWidget {
         barRods: [
           BarChartRodData(
             toY: isCompleted ? 1 : 0,
-            color: isCompleted
-                ? Colors.green
-                : Colors.grey.withOpacity(0.2),
+            color: isCompleted ? Colors.green : Colors.grey.withOpacity(0.2),
             width: 20,
           ),
         ],
@@ -326,7 +440,9 @@ class _RewardsSection extends StatelessWidget {
                 }
 
                 final rewards = snapshot.data!;
-                context.read<RewardService>().checkAndUpdateRewards(habit.currentStreak);
+                context
+                    .read<RewardService>()
+                    .checkAndUpdateRewards(habit.currentStreak);
 
                 return ListView.builder(
                   shrinkWrap: true,
@@ -334,8 +450,9 @@ class _RewardsSection extends StatelessWidget {
                   itemCount: rewards.length,
                   itemBuilder: (context, index) {
                     final reward = rewards[index];
-                    final isCompleted = habit.currentStreak >= reward.requiredStreak;
-                    
+                    final isCompleted =
+                        habit.currentStreak >= reward.requiredStreak;
+
                     return ListTile(
                       leading: Icon(
                         _getIconData(reward.iconName),
@@ -347,7 +464,9 @@ class _RewardsSection extends StatelessWidget {
                       title: Text(
                         reward.title,
                         style: TextStyle(
-                          fontWeight: reward.isUnlocked ? FontWeight.bold : FontWeight.normal,
+                          fontWeight: reward.isUnlocked
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                         ),
                       ),
                       subtitle: Text(reward.description),
@@ -376,7 +495,8 @@ class _CompletionHistory extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sortedDates = [...habit.completedDates]..sort((a, b) => b.compareTo(a));
+    final sortedDates = [...habit.completedDates]
+      ..sort((a, b) => b.compareTo(a));
 
     return Card(
       child: Padding(
@@ -446,7 +566,8 @@ class _JournalSection extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             StreamBuilder<List<JournalEntry>>(
-              stream: context.read<JournalService>().getJournalEntries(habit.id),
+              stream:
+                  context.read<JournalService>().getJournalEntries(habit.id),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
@@ -516,4 +637,4 @@ class _JournalSection extends StatelessWidget {
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
-} 
+}
