@@ -25,7 +25,14 @@ class ThemeService with ChangeNotifier {
   }
 
   Future<void> initPrefs() async {
-    _prefs ??= await SharedPreferences.getInstance();
+    try {
+      _prefs ??= await SharedPreferences.getInstance();
+    } catch (e) {
+      debugPrint('Error initializing SharedPreferences: $e');
+      // Set default values if SharedPreferences fails
+      _isDarkMode = false;
+      _primaryColor = Colors.green;
+    }
   }
 
   Future<void> loadFromPrefs() async {

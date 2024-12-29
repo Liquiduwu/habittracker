@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:habit_tracker/services/auth_service.dart';
 import 'package:habit_tracker/services/habit_service.dart';
 import 'package:habit_tracker/services/theme_service.dart';
@@ -24,6 +25,9 @@ void main() async {
     );
   }
   
+  // Initialize SharedPreferences
+  await SharedPreferences.getInstance();
+
   await NotificationService().initialize();
   runApp(const MyApp());
 }
