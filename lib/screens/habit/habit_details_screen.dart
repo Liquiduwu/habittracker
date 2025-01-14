@@ -47,7 +47,7 @@ class _HabitDetailsScreenState extends State<HabitDetailsScreen> {
       final model = GenerativeModel(
         model: 'gemini-1.5-flash',
         apiKey:
-            'AIzaSyC9lIurwH8K-aPIW5V0crZtozEajM_vU0M', // Use your API key or retrieve it dynamically
+            'AIzaSyA6fZ3aIeZmX-QAhyhJye3kWX4C-ZGozTY', // Use your API key or retrieve it dynamically
       );
 
       // Add instructions for variation and style

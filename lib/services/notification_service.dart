@@ -67,4 +67,4 @@ class NotificationService {
   Future<void> requestPermissions() async {
     await AwesomeNotifications().requestPermissionToSendNotifications();
   }
-} 
+}
