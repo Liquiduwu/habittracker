@@ -23,6 +23,27 @@ class PartnershipService extends ChangeNotifier {
     });
   }
 
+  Future<void> sendPartnershipRequest(
+      String senderId, String receiverId) async {
+    try {
+      // Fetch the sender's email
+      final senderDoc =
+          await _firestore.collection('users').doc(senderId).get();
+      final senderEmail = senderDoc.data()?['email'];
+
+      // Create the partnership request
+      await _firestore.collection('partnerships').add({
+        'senderId': senderId,
+        'receiverId': receiverId,
+        'senderEmail': senderEmail, // Store sender's email
+        'status': 'pending', // Example status
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error sending partnership request: $e');
+    }
+  }
+
   Stream<List<Partnership>> getPendingInvites() {
     return _firestore
         .collection('partnerships')
@@ -38,11 +59,8 @@ class PartnershipService extends ChangeNotifier {
 
   Future<void> sendPartnerInvite(String username) async {
     // Check if trying to invite self
-    final currentUser = await _firestore
-        .collection('users')
-        .doc(userId)
-        .get();
-    
+    final currentUser = await _firestore.collection('users').doc(userId).get();
+
     if (currentUser.data()?['username'] == username) {
       throw 'You cannot invite yourself';
     }
@@ -59,7 +77,7 @@ class PartnershipService extends ChangeNotifier {
 
     final partnerId = partnerQuery.docs.first.id;
     final partnerEmail = partnerQuery.docs.first.get('email');
-    
+
     // Check if partnership already exists
     final existingPartnership = await _firestore
         .collection('partnerships')
@@ -83,7 +101,7 @@ class PartnershipService extends ChangeNotifier {
         .collection('partnerships')
         .doc(partnership.id)
         .set(partnership.toMap());
-    
+
     notifyListeners();
   }
 
@@ -96,10 +114,7 @@ class PartnershipService extends ChangeNotifier {
   }
 
   Future<void> declineInvite(String partnershipId) async {
-    await _firestore
-        .collection('partnerships')
-        .doc(partnershipId)
-        .delete();
+    await _firestore.collection('partnerships').doc(partnershipId).delete();
     notifyListeners();
   }
 
@@ -135,10 +150,72 @@ class PartnershipService extends ChangeNotifier {
   }
 
   Future<void> removePartnership(String partnershipId) async {
-    await _firestore
-        .collection('partnerships')
-        .doc(partnershipId)
-        .delete();
+    await _firestore.collection('partnerships').doc(partnershipId).delete();
     notifyListeners();
   }
-} 
+
+  Future<List<Map<String, dynamic>>> getSuggestedPartners() async {
+    try {
+      // Get the current user's habits
+      final userHabitsSnapshot = await _firestore
+          .collection('habits')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      // Extract habit titles and ensure they are Strings
+      final userHabitTitles = userHabitsSnapshot.docs
+          .map((doc) => doc.data()['title'].toString())
+          .toSet();
+
+      if (userHabitTitles.isEmpty) {
+        return [];
+      }
+
+      // Fetch the current user's partnership list
+      final partnershipsSnapshot = await _firestore
+          .collection('partnerships')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      final partneredUserIds = partnershipsSnapshot.docs
+          .map((doc) => doc.data()['partnerId'].toString())
+          .toSet();
+
+      // Find other users with matching habit titles
+      final similarHabitsSnapshot = await _firestore
+          .collection('habits')
+          .where('title', whereIn: userHabitTitles.toList().cast<String>())
+          .get();
+
+      final suggestions = <Map<String, dynamic>>{};
+
+      for (var doc in similarHabitsSnapshot.docs) {
+        final data = doc.data();
+        final habitUserId = data['userId'] as String;
+
+        if (habitUserId == userId || partneredUserIds.contains(habitUserId)) {
+          continue; // Skip current user and users already in partnerships
+        }
+
+        final usernameSnapshot =
+            await _firestore.collection('users').doc(habitUserId).get();
+
+        final username = usernameSnapshot.data()?['username'] ?? 'Unknown';
+        final commonHabit = data['title'].toString();
+
+        // Add to suggestions list
+        suggestions.add({
+          'user': {
+            'id': habitUserId,
+            'username': username,
+          },
+          'commonHabits': [commonHabit],
+        });
+      }
+
+      return suggestions.toList();
+    } catch (e) {
+      throw Exception('Failed to fetch suggested partners: $e');
+    }
+  }
+}

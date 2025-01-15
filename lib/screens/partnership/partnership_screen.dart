@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:habit_tracker/services/partnership_service.dart';
 import 'package:habit_tracker/models/partnership.dart';
 import 'package:habit_tracker/models/habit.dart';
+import 'package:habit_tracker/screens/partnership/suggested_partners_screen.dart';
 
 class PartnershipScreen extends StatelessWidget {
   const PartnershipScreen({super.key});
@@ -24,6 +25,18 @@ class PartnershipScreen extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.person_add),
               onPressed: () => _showAddPartnerDialog(context),
+            ),
+            IconButton(
+              icon: const Icon(Icons.lightbulb_outline),
+              tooltip: 'Suggestions',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SuggestedPartnersScreen(),
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -71,7 +84,10 @@ class PartnershipScreen extends StatelessWidget {
             onPressed: () {
               final username = usernameController.text.trim();
               if (username.isNotEmpty) {
-                context.read<PartnershipService>().sendPartnerInvite(username).then((_) {
+                context
+                    .read<PartnershipService>()
+                    .sendPartnerInvite(username)
+                    .then((_) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Invitation sent')),
@@ -106,7 +122,9 @@ class _PartnersTab extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              context.read<PartnershipService>().removePartnership(partnership.id);
+              context
+                  .read<PartnershipService>()
+                  .removePartnership(partnership.id);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Partner removed')),
@@ -161,7 +179,9 @@ class _PartnersTab extends StatelessWidget {
                   child: Icon(Icons.person),
                 ),
                 title: FutureBuilder<String>(
-                  future: context.read<PartnershipService>().getPartnerUsername(partnership.partnerId),
+                  future: context
+                      .read<PartnershipService>()
+                      .getPartnerUsername(partnership.partnerId),
                   builder: (context, snapshot) {
                     return Text(snapshot.data ?? 'Loading...');
                   },
@@ -175,12 +195,14 @@ class _PartnersTab extends StatelessWidget {
                     if (partnership.isAccepted)
                       IconButton(
                         icon: const Icon(Icons.visibility),
-                        onPressed: () => _showPartnerHabits(context, partnership),
+                        onPressed: () =>
+                            _showPartnerHabits(context, partnership),
                       ),
                     IconButton(
                       icon: const Icon(Icons.delete_outline),
                       color: Theme.of(context).colorScheme.error,
-                      onPressed: () => _showRemovePartnerDialog(context, partnership),
+                      onPressed: () =>
+                          _showRemovePartnerDialog(context, partnership),
                     ),
                   ],
                 ),
@@ -304,4 +326,4 @@ class _PartnerHabitsSheet extends StatelessWidget {
       },
     );
   }
-} 
+}
