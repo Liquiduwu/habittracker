@@ -44,17 +44,40 @@ class PartnershipService extends ChangeNotifier {
     }
   }
 
-  Stream<List<Partnership>> getPendingInvites() {
-    return _firestore
-        .collection('partnerships')
-        .where('partnerId', isEqualTo: userId)
-        .where('isAccepted', isEqualTo: false)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => Partnership.fromMap({'id': doc.id, ...doc.data()}))
-          .toList();
-    });
+  Stream<List<Partnership>> getPendingInvites() async* {
+    try {
+      final snapshots = _firestore
+          .collection('partnerships')
+          .where('partnerId', isEqualTo: userId)
+          .where('isAccepted', isEqualTo: false)
+          .snapshots();
+
+      await for (final snapshot in snapshots) {
+        final partnerships = <Partnership>[];
+
+        for (final doc in snapshot.docs) {
+          final data = doc.data();
+
+          // Fetch sender username from users collection
+          final senderId = data['userId'];
+          final userDoc =
+              await _firestore.collection('users').doc(senderId).get();
+          final senderUsername = userDoc.data()?['username'] ?? 'Unknown';
+
+          // Add to partnerships list
+          partnerships.add(Partnership.fromMap({
+            ...data,
+            'id': doc.id,
+            'partnerEmail': senderUsername, // Replace with sender's username
+          }));
+        }
+
+        yield partnerships;
+      }
+    } catch (e) {
+      print('Error fetching pending invites: $e');
+      yield [];
+    }
   }
 
   Future<void> sendPartnerInvite(String username) async {
