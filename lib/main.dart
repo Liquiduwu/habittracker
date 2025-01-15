@@ -13,10 +13,11 @@ import 'package:habit_tracker/services/notification_service.dart';
 import 'package:habit_tracker/services/reward_service.dart';
 import 'package:habit_tracker/services/journal_service.dart';
 import 'package:habit_tracker/services/partnership_service.dart';
+import 'package:sqflite/sqflite.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase only once
   if (Firebase.apps.isEmpty) {
     await Firebase.initializeApp(
@@ -24,7 +25,7 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
   }
-  
+
   // Initialize SharedPreferences
   await SharedPreferences.getInstance();
 
@@ -43,23 +44,27 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ThemeService()),
         ChangeNotifierProxyProvider<AuthService, HabitService?>(
           create: (_) => null,
-          update: (_, auth, __) =>
-              auth.currentUser != null ? HabitService(auth.currentUser!.uid) : null,
+          update: (_, auth, __) => auth.currentUser != null
+              ? HabitService(auth.currentUser!.uid)
+              : null,
         ),
         ChangeNotifierProxyProvider<AuthService, RewardService?>(
           create: (_) => null,
-          update: (_, auth, __) =>
-              auth.currentUser != null ? RewardService(auth.currentUser!.uid) : null,
+          update: (_, auth, __) => auth.currentUser != null
+              ? RewardService(auth.currentUser!.uid)
+              : null,
         ),
         ChangeNotifierProxyProvider<AuthService, JournalService?>(
           create: (_) => null,
-          update: (_, auth, __) =>
-              auth.currentUser != null ? JournalService(auth.currentUser!.uid) : null,
+          update: (_, auth, __) => auth.currentUser != null
+              ? JournalService(auth.currentUser!.uid)
+              : null,
         ),
         ChangeNotifierProxyProvider<AuthService, PartnershipService?>(
           create: (_) => null,
-          update: (_, auth, __) =>
-              auth.currentUser != null ? PartnershipService(auth.currentUser!.uid) : null,
+          update: (_, auth, __) => auth.currentUser != null
+              ? PartnershipService(auth.currentUser!.uid)
+              : null,
         ),
       ],
       child: Consumer<ThemeService>(

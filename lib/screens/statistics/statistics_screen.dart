@@ -50,7 +50,8 @@ class _OverviewTab extends StatelessWidget {
 
             final habits = snapshot.data!;
             final totalHabits = habits.length;
-            final activeHabits = habits.where((h) => h.currentStreak > 0).length;
+            final activeHabits =
+                habits.where((h) => h.currentStreak > 0).length;
             final completedHabits =
                 habits.where((h) => h.progress >= 1.0).length;
 
@@ -171,4 +172,4 @@ class _StatCard extends StatelessWidget {
       ),
     );
   }
-} 
+}

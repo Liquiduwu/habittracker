@@ -8,6 +8,7 @@ import 'package:habit_tracker/screens/statistics/statistics_screen.dart';
 import 'package:habit_tracker/screens/calendar/calendar_screen.dart';
 import 'package:habit_tracker/screens/habit/template_selection_screen.dart';
 import 'package:habit_tracker/screens/partnership/partnership_screen.dart';
+import 'package:habit_tracker/screens/notes/notes_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -15,7 +16,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeService = Provider.of<ThemeService>(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: FutureBuilder<String>(
@@ -48,6 +49,14 @@ class HomeScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => const CalendarScreen(),
+                    ),
+                  );
+                  break;
+                case 'notes':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NotesScreen(),
                     ),
                   );
                   break;
@@ -119,6 +128,19 @@ class HomeScreen extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     const Text('Calendar'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'notes',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.note_alt,
+                      color: Theme.of(context).iconTheme.color,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Notes'),
                   ],
                 ),
               ),
@@ -245,4 +267,4 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
-} 
+}
