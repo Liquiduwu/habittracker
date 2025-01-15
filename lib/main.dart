@@ -1,4 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:habit_tracker/repositories/habit_repository.dart';
+import 'package:habit_tracker/services/connectivity_service.dart';
+import 'package:habit_tracker/services/database_service.dart';
+import 'package:habit_tracker/services/offline_sync_service.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,9 +19,10 @@ import 'package:habit_tracker/services/reward_service.dart';
 import 'package:habit_tracker/services/journal_service.dart';
 import 'package:habit_tracker/services/partnership_service.dart';
 
-void main() async {
+Future<void> main() async {
+  // Ensure Flutter bindings are initialized
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase only once
   if (Firebase.apps.isEmpty) {
     await Firebase.initializeApp(
@@ -24,12 +30,33 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
   }
-  
-  // Initialize SharedPreferences
-  await SharedPreferences.getInstance();
 
-  await NotificationService().initialize();
-  runApp(const MyApp());
+  final firestore = FirebaseFirestore.instance;
+  final databaseService = DatabaseService();
+  final connectivityService = ConnectivityService();
+
+  final offlineSyncService = OfflineSyncService(
+    databaseService: databaseService,
+    connectivityService: connectivityService,
+    firestore: firestore,
+  );
+
+  final habitRepository = HabitRepository(
+    databaseService: databaseService,
+    offlineSyncService: offlineSyncService,
+  );
+
+  runApp(
+    MultiProvider(
+      providers: [
+        Provider<DatabaseService>(create: (_) => databaseService),
+        Provider<ConnectivityService>(create: (_) => connectivityService),
+        Provider<OfflineSyncService>(create: (_) => offlineSyncService),
+        Provider<HabitRepository>(create: (_) => habitRepository),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -43,23 +70,27 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ThemeService()),
         ChangeNotifierProxyProvider<AuthService, HabitService?>(
           create: (_) => null,
-          update: (_, auth, __) =>
-              auth.currentUser != null ? HabitService(auth.currentUser!.uid) : null,
+          update: (_, auth, __) => auth.currentUser != null
+              ? HabitService(auth.currentUser!.uid)
+              : null,
         ),
         ChangeNotifierProxyProvider<AuthService, RewardService?>(
           create: (_) => null,
-          update: (_, auth, __) =>
-              auth.currentUser != null ? RewardService(auth.currentUser!.uid) : null,
+          update: (_, auth, __) => auth.currentUser != null
+              ? RewardService(auth.currentUser!.uid)
+              : null,
         ),
         ChangeNotifierProxyProvider<AuthService, JournalService?>(
           create: (_) => null,
-          update: (_, auth, __) =>
-              auth.currentUser != null ? JournalService(auth.currentUser!.uid) : null,
+          update: (_, auth, __) => auth.currentUser != null
+              ? JournalService(auth.currentUser!.uid)
+              : null,
         ),
         ChangeNotifierProxyProvider<AuthService, PartnershipService?>(
           create: (_) => null,
-          update: (_, auth, __) =>
-              auth.currentUser != null ? PartnershipService(auth.currentUser!.uid) : null,
+          update: (_, auth, __) => auth.currentUser != null
+              ? PartnershipService(auth.currentUser!.uid)
+              : null,
         ),
       ],
       child: Consumer<ThemeService>(

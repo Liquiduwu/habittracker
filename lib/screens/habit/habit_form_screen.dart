@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:habit_tracker/repositories/habit_repository.dart';
+import 'package:habit_tracker/services/database_service.dart';
+import 'package:habit_tracker/services/offline_sync_service.dart';
 import 'package:provider/provider.dart';
 import 'package:habit_tracker/models/habit.dart';
 import 'package:habit_tracker/services/habit_service.dart';
@@ -15,26 +18,55 @@ class HabitFormScreen extends StatefulWidget {
 }
 
 class _HabitFormScreenState extends State<HabitFormScreen> {
+  late final DatabaseService _databaseService;
+  late final HabitRepository _habitRepository;
+  String? _databasePath;
+
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
   late TextEditingController _targetDaysController;
   bool _reminderEnabled = false;
   TimeOfDay? _reminderTime;
-
   String? aiGeneratedHabit;
   bool isLoadingAI = false;
 
   @override
   void initState() {
     super.initState();
+    _databaseService = DatabaseService();
     _titleController = TextEditingController(text: widget.habit?.title);
     _descriptionController =
         TextEditingController(text: widget.habit?.description);
     _targetDaysController =
-        TextEditingController(text: widget.habit?.targetDays?.toString() ?? '');
+        TextEditingController(text: widget.habit?.targetDays.toString() ?? '');
     _reminderEnabled = widget.habit?.reminderEnabled ?? false;
     _reminderTime = widget.habit?.reminderTime;
+
+    // Use Future.microtask to ensure the context is available
+    Future.microtask(() async {
+      await _initializeDatabase();
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  Future<void> _initializeDatabase() async {
+    try {
+      _databasePath = await _databaseService.databasePath;
+      print('Database path: $_databasePath');
+
+      if (!mounted) return;
+
+      _habitRepository = HabitRepository(
+        databaseService: _databaseService,
+        offlineSyncService: context.read<OfflineSyncService>(),
+      );
+    } catch (e) {
+      print('Error initializing database: $e');
+      // Handle error appropriately
+    }
   }
 
   @override
@@ -45,10 +77,64 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
     super.dispose();
   }
 
+  Future<void> _saveHabit() async {
+    if (_formKey.currentState!.validate()) {
+      final habitService = context.read<HabitService>();
+      final userId = habitService.userId;
+      final habit = Habit(
+        id: widget.habit?.id ??
+            DateTime.now().millisecondsSinceEpoch.toString(),
+        userId: userId,
+        title: _titleController.text,
+        description: _descriptionController.text,
+        targetDays: int.parse(_targetDaysController.text),
+        reminderEnabled: _reminderEnabled,
+        reminderTime: _reminderTime,
+        completedDates: widget.habit?.completedDates ?? [],
+        createdAt: widget.habit?.createdAt ?? DateTime.now(),
+        isSynced: false,
+      );
+
+      try {
+        // Convert to map with snake_case keys for SQLite
+        final habitMap = {
+          'id': habit.id,
+          'user_id': habit.userId, // Changed from userId
+          'title': habit.title,
+          'description': habit.description,
+          'target_days': habit.targetDays,
+          'reminder_enabled': habit.reminderEnabled ? 1 : 0,
+          'reminder_time': habit.reminderTime?.format(context),
+          'completed_dates': habit.completedDates.join(','),
+          'created_at': habit.createdAt.toIso8601String(),
+          'is_synced': habit.isSynced ? 1 : 0,
+          'is_favorite': 0, // Default value
+        };
+
+        if (widget.habit != null) {
+          await _habitRepository.updateHabit(habit);
+          await habitService.updateHabit(habit);
+        } else {
+          await _habitRepository.addHabit(habit);
+          await habitService.addHabit(habit);
+        }
+
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      } catch (e) {
+        print('Error saving habit: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e')),
+          );
+        }
+      }
+    }
+  }
+
   Future<void> _generateHabitUsingAI(BuildContext context) async {
     final summaryController = TextEditingController();
-
-    debugPrint('Initiating AI habit generation process...');
 
     final summary = await showDialog<String>(
       context: context,
@@ -64,18 +150,11 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                debugPrint('User canceled habit summary input.');
-                Navigator.pop(context, null);
-              },
+              onPressed: () => Navigator.pop(context, null),
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
-                debugPrint(
-                    'User submitted habit summary: ${summaryController.text}');
-                Navigator.pop(context, summaryController.text);
-              },
+              onPressed: () => Navigator.pop(context, summaryController.text),
               child: const Text('Submit'),
             ),
           ],
@@ -83,10 +162,7 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
       },
     );
 
-    if (summary == null || summary.isEmpty) {
-      debugPrint('No summary provided. Exiting AI habit generation.');
-      return;
-    }
+    if (summary == null || summary.isEmpty) return;
 
     setState(() {
       isLoadingAI = true;
@@ -95,8 +171,7 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
     try {
       final generativeModel = GenerativeModel(
         model: 'gemini-1.5-flash',
-        apiKey:
-            'AIzaSyA6fZ3aIeZmX-QAhyhJye3kWX4C-ZGozTY', // Replace with actual Gemini API key
+        apiKey: 'YOUR_API_KEY', // Replace with actual API key
       );
 
       final prompt = '''
@@ -109,33 +184,19 @@ Provide:
 - Target days as an integer
 ''';
 
-      debugPrint('Generated prompt for AI: $prompt');
-
       final response =
           await generativeModel.generateContent([Content.text(prompt)]);
 
-      debugPrint('Response from AI: ${response.text}');
-
       final content = response.text?.trim() ?? '';
-
-      final lines = content.split('\n');
       final titleMatch = RegExp(r'\*\*Title:\*\*\s*(.*)').firstMatch(content);
       final descriptionMatch =
           RegExp(r'\*\*Description:\*\*\s*(.*)').firstMatch(content);
       final targetDaysMatch =
           RegExp(r'\*\*Target days:\*\*\s*(.*)').firstMatch(content);
 
-      final title = titleMatch != null ? titleMatch.group(1)?.trim() ?? '' : '';
-      final description = descriptionMatch != null
-          ? descriptionMatch.group(1)?.trim() ?? ''
-          : '';
-      final targetDays =
-          targetDaysMatch != null ? targetDaysMatch.group(1)?.trim() ?? '' : '';
-
-      debugPrint('Parsed AI Output:');
-      debugPrint('Title: $title');
-      debugPrint('Description: $description');
-      debugPrint('Target Days: $targetDays');
+      final title = titleMatch?.group(1)?.trim() ?? '';
+      final description = descriptionMatch?.group(1)?.trim() ?? '';
+      final targetDays = targetDaysMatch?.group(1)?.trim() ?? '';
 
       setState(() {
         _titleController.text = title;
@@ -144,50 +205,11 @@ Provide:
         isLoadingAI = false;
       });
     } catch (error) {
-      debugPrint('Error during AI habit generation: $error');
+      print('Error generating habit: $error');
       setState(() {
         aiGeneratedHabit = 'Error generating habit. Please try again.';
         isLoadingAI = false;
       });
-    } finally {
-      debugPrint('AI habit generation process completed.');
-    }
-  }
-
-  Future<void> _saveHabit() async {
-    if (_formKey.currentState!.validate()) {
-      final habitService = context.read<HabitService>();
-      final userId = habitService.userId;
-
-      final habit = Habit(
-        id: widget.habit?.id ??
-            DateTime.now().millisecondsSinceEpoch.toString(),
-        userId: userId,
-        title: _titleController.text,
-        description: _descriptionController.text,
-        targetDays: int.parse(_targetDaysController.text),
-        reminderEnabled: _reminderEnabled,
-        reminderTime: _reminderTime,
-        completedDates: widget.habit?.completedDates ?? [],
-        createdAt: widget.habit?.createdAt ?? DateTime.now(),
-      );
-
-      try {
-        if (widget.habit != null) {
-          await habitService.updateHabit(habit);
-        } else {
-          await habitService.addHabit(habit);
-        }
-        if (mounted) {
-          Navigator.pop(context);
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
-          );
-        }
-      }
     }
   }
 
