@@ -17,6 +17,7 @@ class SuggestedPartnersScreen extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+
           if (snapshot.hasError) {
             return Center(
               child: Text('Error: ${snapshot.error}'),
@@ -24,6 +25,7 @@ class SuggestedPartnersScreen extends StatelessWidget {
           }
 
           final suggestions = snapshot.data ?? [];
+
           if (suggestions.isEmpty) {
             return const Center(
               child: Text('No suggestions available'),
@@ -36,16 +38,19 @@ class SuggestedPartnersScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final suggestion = suggestions[index];
               final user = suggestion['user'];
-              final commonHabits = suggestion['commonHabits'] as List<String>;
+              final commonHabits = (suggestion['commonHabits'] as List<String>);
 
               return Card(
+                margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
-                  leading: const CircleAvatar(
-                    child: Icon(Icons.person),
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.green[100],
+                    child: const Icon(Icons.person, color: Colors.black54),
                   ),
                   title: Text(user['username']),
                   subtitle: Text(
-                    'Common Habit(s): ${commonHabits.join(', ')}',
+                    'Common Habit(s): ${commonHabits.join(", ")}',
+                    style: const TextStyle(fontSize: 13),
                   ),
                   trailing: IconButton(
                     icon: const Icon(Icons.person_add),

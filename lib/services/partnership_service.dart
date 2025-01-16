@@ -179,13 +179,12 @@ class PartnershipService extends ChangeNotifier {
 
   Future<List<Map<String, dynamic>>> getSuggestedPartners() async {
     try {
-      // Get the current user's habits
+      // Fetch the current user's habits
       final userHabitsSnapshot = await _firestore
           .collection('habits')
           .where('userId', isEqualTo: userId)
           .get();
 
-      // Extract habit titles and ensure they are Strings
       final userHabitTitles = userHabitsSnapshot.docs
           .map((doc) => doc.data()['title'].toString())
           .toSet();
@@ -194,7 +193,7 @@ class PartnershipService extends ChangeNotifier {
         return [];
       }
 
-      // Fetch the current user's partnership list
+      // Fetch existing partnerships
       final partnershipsSnapshot = await _firestore
           .collection('partnerships')
           .where('userId', isEqualTo: userId)
@@ -204,39 +203,64 @@ class PartnershipService extends ChangeNotifier {
           .map((doc) => doc.data()['partnerId'].toString())
           .toSet();
 
-      // Find other users with matching habit titles
+      // Fetch all habits that match any of the current user's habits
       final similarHabitsSnapshot = await _firestore
           .collection('habits')
-          .where('title', whereIn: userHabitTitles.toList().cast<String>())
+          .where('title', whereIn: userHabitTitles.toList())
           .get();
 
-      final suggestions = <Map<String, dynamic>>{};
+      // Map to store unique users and their matching habits
+      final Map<String, Map<String, dynamic>> uniqueUsers = {};
 
+      // Process each habit document
       for (var doc in similarHabitsSnapshot.docs) {
         final data = doc.data();
         final habitUserId = data['userId'] as String;
+        final habitTitle = data['title'].toString();
 
+        // Skip if this is the current user or an existing partner
         if (habitUserId == userId || partneredUserIds.contains(habitUserId)) {
-          continue; // Skip current user and users already in partnerships
+          continue;
         }
 
-        final usernameSnapshot =
-            await _firestore.collection('users').doc(habitUserId).get();
+        // If we haven't processed this user yet, initialize their entry
+        if (!uniqueUsers.containsKey(habitUserId)) {
+          // Fetch user data only once per user
+          final userDoc =
+              await _firestore.collection('users').doc(habitUserId).get();
+          final username = userDoc.data()?['username'] ?? 'Unknown';
 
-        final username = usernameSnapshot.data()?['username'] ?? 'Unknown';
-        final commonHabit = data['title'].toString();
+          uniqueUsers[habitUserId] = {
+            'user': {
+              'id': habitUserId,
+              'username': username,
+            },
+            'commonHabits': <String>{}, // Using a Set to avoid duplicates
+          };
+        }
 
-        // Add to suggestions list
-        suggestions.add({
-          'user': {
-            'id': habitUserId,
-            'username': username,
-          },
-          'commonHabits': [commonHabit],
-        });
+        // Add the habit to the user's set of habits
+        if (userHabitTitles.contains(habitTitle)) {
+          (uniqueUsers[habitUserId]!['commonHabits'] as Set<String>)
+              .add(habitTitle);
+        }
       }
 
-      return suggestions.toList();
+      // Convert the map to a list and convert Sets to Lists
+      final suggestions = uniqueUsers.values
+          .map((userData) => {
+                'user': userData['user'],
+                'commonHabits':
+                    (userData['commonHabits'] as Set<String>).toList(),
+              })
+          .toList();
+
+      // Sort by number of common habits (most to least)
+      suggestions.sort((a, b) => (b['commonHabits'] as List)
+          .length
+          .compareTo((a['commonHabits'] as List).length));
+
+      return suggestions;
     } catch (e) {
       throw Exception('Failed to fetch suggested partners: $e');
     }
