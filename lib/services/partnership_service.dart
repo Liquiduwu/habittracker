@@ -180,6 +180,7 @@ class PartnershipService extends ChangeNotifier {
   Future<List<Map<String, dynamic>>> getSuggestedPartners() async {
     try {
       // Fetch the current user's habits
+
       final userHabitsSnapshot = await _firestore
           .collection('habits')
           .where('userId', isEqualTo: userId)
@@ -254,11 +255,6 @@ class PartnershipService extends ChangeNotifier {
                     (userData['commonHabits'] as Set<String>).toList(),
               })
           .toList();
-
-      // Sort by number of common habits (most to least)
-      suggestions.sort((a, b) => (b['commonHabits'] as List)
-          .length
-          .compareTo((a['commonHabits'] as List).length));
 
       return suggestions;
     } catch (e) {
